@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService as NestConfigService } from '@nestjs/config';
 import { IDatabaseConfig } from './sections/database/database.interface';
 import { IAppConfig } from './sections/app/app.interface';
+import { IMailProviderConfig } from './sections/mail-providors/mail-provider.interface';
 
 @Injectable()
 export class ConfigService {
@@ -15,5 +16,11 @@ export class ConfigService {
     return this.configService.get<IDatabaseConfig>(
       'database',
     ) as IDatabaseConfig;
+  }
+
+  get mailProvider(): IMailProviderConfig {
+    return this.configService.get<IMailProviderConfig>(
+      'mailProvider',
+    ) as IMailProviderConfig;
   }
 }

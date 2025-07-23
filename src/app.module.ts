@@ -6,7 +6,13 @@ import { SimulationModule } from './simulation/simulation.module';
 import { MailModule } from './mail/mail.module';
 
 @Module({
-  imports: [ConfigModule, DatabaseModule, MailAgentModule, SimulationModule, MailModule],
+  imports: [
+    ConfigModule,
+    DatabaseModule,
+    MailAgentModule,
+    SimulationModule,
+    MailModule,
+  ],
   controllers: [],
   providers: [],
 })
