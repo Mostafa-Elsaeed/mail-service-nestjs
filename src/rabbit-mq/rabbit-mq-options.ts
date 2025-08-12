@@ -14,7 +14,7 @@ export const rabbitmqClientConfig: ClientProviderOptions = {
     urls: [rabbitmqUrl],
     queue: rabbitMqConfig().rabbitMq.rabbitMqQueue,
     queueOptions: {
-      durable: false,
+      durable: true,
     },
   },
 };
@@ -25,7 +25,7 @@ export const rabbitmqServerConfig: RmqOptions = {
     urls: [rabbitmqUrl],
     queue: rabbitMqConfig().rabbitMq.rabbitMqQueue,
     queueOptions: {
-      durable: false,
+      durable: true,
     },
     noAck: false,
   },
