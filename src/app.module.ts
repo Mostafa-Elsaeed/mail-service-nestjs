@@ -4,6 +4,7 @@ import { DatabaseModule } from './database/database.module';
 import { MailAgentModule } from './mail-agent/mail-agent.module';
 import { SimulationModule } from './simulation/simulation.module';
 import { MailModule } from './mail/mail.module';
+import { RabbitMqModule } from './rabbit-mq/rabbit-mq.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { MailModule } from './mail/mail.module';
     MailAgentModule,
     SimulationModule,
     MailModule,
+    RabbitMqModule,
   ],
   controllers: [],
   providers: [],

@@ -3,8 +3,16 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { SwaggerTheme, SwaggerThemeNameEnum } from 'swagger-themes';
 
+// import { MicroserviceOptions } from '@nestjs/microservices';
+// import { Logger } from '@nestjs/common';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // app.connectMicroservice<RmqOptions>(rabbitmqServerConfig);
+
+  // app.connectMicroservice<MicroserviceOptions>(rabbitmqServerConfig);
+  // await app.startAllMicroservices();
+  console.log('RabbitMQ Microservice is running');
 
   const config = new DocumentBuilder()
     .setTitle('API Documentation')
@@ -21,6 +29,12 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
 
   SwaggerModule.setup('docs', app, document, options);
+
+  // app.connectMicroservice<MicroserviceOptions>(rabbitMQConfig());
+
+  // await app.startAllMicroservices();
+  // Logger.log('RabbitMQ Microservice is running');
+
   await app.listen(process.env.PORT ?? 3000);
 
   console.log(
