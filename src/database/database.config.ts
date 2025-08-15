@@ -5,8 +5,9 @@ import { join } from 'path';
 
 // Load environment variables from .env file
 console.log(
+  // /Volumes/HDD/Coding/Work/John/mail-service-nestjs/dist/**/*.entity{.ts,.js}
   'Database entities path:',
-  join(__dirname + '/migrations/**/*{.ts,.js}'),
+  join(__dirname, '..', '..', 'src', 'migrations', '**', '*.entity{.ts,.js}'),
 );
 
 dotenv.config();
@@ -19,9 +20,17 @@ export const AppDataSource = new DataSource({
   password: process.env.DATABASE_PASSWORD || 'postgres',
   database: process.env.DATABASE_NAME || 'my_database',
   schema: process.env.DATABASE_SCHEMA || 'public',
-  //   entities: [__dirname + "/**/*.entity{.ts,.js}"],
+
   entities: [join(__dirname, '..', '**', '*.entity{.ts,.js}')],
-  migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
+  // entities: [join(__dirname, '..', '..', 'src', '**', '*.entity{.ts,.js}')],
+  // entities: [join(__dirname, 'entities/**/*{.ts,.js}')],
+
+  // migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
+  // migrations: ['src/migrations/**/*{.ts,.js}'],
+  // migrations: [join(__dirname, 'migrations/**/*{.ts,.js}')],
+  migrations: [
+    join(__dirname, '..', '..', 'src', 'migrations', '**', '*{.ts,.js}'),
+  ],
 
   synchronize: process.env.NODE_ENV !== 'production', // Automatically create database schema (not recommended for production)
   logging: process.env.NODE_ENV !== 'production',
