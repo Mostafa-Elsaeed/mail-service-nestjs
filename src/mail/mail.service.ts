@@ -11,6 +11,7 @@ import { rabbitMqConfig } from '../config/sections/rabbit-mq/rabbit-mq.config';
 import { MailRequestsEntity } from './entities/mail-requests.entity';
 import { statusEnum } from './entities/status.enum';
 import { SimulationService } from '../simulation/simulation.service';
+import { MailResultDto } from 'src/mail-agent/mail-respnse.dto';
 
 @Injectable()
 export class MailService {
@@ -46,27 +47,43 @@ export class MailService {
     return this.mailRequestRepo.save(request);
   }
 
-  async changeMailRequestStatus(
+  async processMailRequest(sendMailDto: SendMailDto, requestId: string) {
+    const mailRequest = await this.getOrFail(requestId);
+    if (!mailRequest) return; // gracefully exit if not found
+
+    await this.changeMailRequestStatus(mailRequest, statusEnum.PROCESSING);
+    try {
+      const sendResponse =
+        await this.simulationService.runSimulation(sendMailDto);
+
+      await this.changeMailRequestStatus(
+        mailRequest,
+        sendResponse.success ? statusEnum.DONE : statusEnum.ERROR,
+      );
+    } catch (error) {
+      this.logger.error(`Error during mail simulation: ${error.message}`);
+      await this.changeMailRequestStatus(mailRequest, statusEnum.ERROR);
+    }
+  }
+
+  updateMailRequestDB(
     mailRequest: MailRequestsEntity,
-    status: statusEnum,
+    requestResult: MailResultDto,
   ) {
-    mailRequest.status = status;
+    mailRequest.externalId = requestResult.externalId;
+    mailRequest.errorCode = requestResult.errorCode;
+    mailRequest.status = requestResult.success
+      ? statusEnum.DONE
+      : statusEnum.ERROR;
     return this.mailRequestRepo.save(mailRequest);
   }
 
+  // DB FUNCTIONS
   async getMailRequestById(mailRequestId: string) {
-    const mailRequest = await this.mailRequestRepo.findOne({
+    return await this.mailRequestRepo.findOne({
       where: { id: mailRequestId },
     });
-    if (!mailRequest) {
-      this.logger.warn(`Mail request ${mailRequestId} not found`);
-      // throw new NotFoundException(
-      //   `Mail request with ID ${mailRequestId} not found`,
-      // );
-    }
-    return mailRequest;
   }
-
   async getOrFail(mailRequestId: string) {
     const mailRequest = await this.getMailRequestById(mailRequestId);
     if (!mailRequest) {
@@ -75,15 +92,34 @@ export class MailService {
     }
     return mailRequest;
   }
+  async changeMailRequestStatus(
+    mailRequest: MailRequestsEntity,
+    status: statusEnum,
+  ) {
+    mailRequest.status = status;
+    return this.mailRequestRepo.save(mailRequest);
+  }
+  updateMailRequestRetryCount(
+    mailRequest: MailRequestsEntity,
+    retryCount: number,
+  ) {
+    mailRequest.retryCount = retryCount + 1;
+    return this.mailRequestRepo.save(mailRequest);
+  }
 
-  async processMailRequest(sendMailDto: SendMailDto, requestId: string) {
-    const mailRequest = await this.getOrFail(requestId);
-    if (!mailRequest) return; // gracefully exit if not found
+  updateMailRequestExternalId(
+    mailRequest: MailRequestsEntity,
+    externalId: string,
+  ) {
+    mailRequest.externalId = externalId;
+    return this.mailRequestRepo.save(mailRequest);
+  }
 
-    await this.changeMailRequestStatus(mailRequest, statusEnum.PROCESSING);
-    this.simulationService.runSimulation(sendMailDto);
-    // await this.mailAgentService.sendMailUsingProvider(sendMailDto);
-
-    // await this.changeMailRequestStatus(mailRequest, statusEnum.DONE);
+  updateMailRequestErrorCode(
+    mailRequest: MailRequestsEntity,
+    errorCode: string,
+  ) {
+    mailRequest.errorCode = errorCode;
+    return this.mailRequestRepo.save(mailRequest);
   }
 }

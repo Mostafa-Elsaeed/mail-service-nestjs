@@ -3,6 +3,7 @@ import { ConfigService } from '../../config/config.service';
 import { IMailAgent } from '../mail-agent.interface';
 import { Client } from '@microsoft/microsoft-graph-client';
 import axios from 'axios';
+import { MailResultDto } from '../mail-respnse.dto';
 
 export interface OutlookMailOptions {
   to: string | string[];
@@ -93,7 +94,7 @@ export class OutlookService implements IMailAgent {
     }
   }
 
-  async sendMail(options: OutlookMailOptions) {
+  async sendMail(options: OutlookMailOptions): Promise<MailResultDto> {
     try {
       // Format recipients
       const toRecipients = this.formatRecipients(options.to);
@@ -144,26 +145,24 @@ export class OutlookService implements IMailAgent {
         `Sending email to ${JSON.stringify(options.to)} from ${userEmail}`,
       );
 
-      await this.graphClient.api(`/users/${userEmail}/sendMail`).post(message);
+      const result = await this.graphClient
+        .api(`/users/${userEmail}/sendMail`)
+        .post(message);
+      return this.convertMailResultToUnifiedResponse(result);
+      // this.logger.log(
+      //   `Email sent successfully to ${JSON.stringify(options.to)}`,
+      // );
 
-      this.logger.log(
-        `Email sent successfully to ${JSON.stringify(options.to)}`,
-      );
-
-      return {
-        success: true,
-        message: 'Email sent successfully',
-      };
+      // return {
+      //   success: true,
+      //   message: 'Email sent successfully',
+      // };
     } catch (error) {
       this.logger.error(
         `Error sending email with Outlook: ${error.message}`,
         error.stack,
       );
-      return {
-        success: false,
-        message: `Failed to send email: ${error.message}`,
-        error,
-      };
+      return this.convertMailResultToUnifiedResponse(error);
     }
   }
 
@@ -180,5 +179,30 @@ export class OutlookService implements IMailAgent {
 
   printOutProviderName() {
     console.log('Outlook Mail Provider');
+  }
+
+  // convertMailResultToUnifiedResponse(responseShape: unknown): MailResultDto {}
+  convertMailResultToUnifiedResponse(responseShape: unknown): MailResultDto {
+    // If Graph returned nothing (202 Accepted case)
+    const response: MailResultDto = new MailResultDto();
+    if (!responseShape) {
+      response.success = true;
+      return response;
+    }
+
+    // If we got an error object
+    const errorObj: any = (responseShape as any)?.error;
+    if (errorObj) {
+      return {
+        success: false,
+        errorCode: errorObj.code,
+      };
+    }
+
+    // Fallback if shape is unexpected
+    return {
+      success: false,
+      errorCode: 'UNKNOWN_ERROR',
+    };
   }
 }

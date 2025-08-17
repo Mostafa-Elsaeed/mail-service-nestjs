@@ -16,11 +16,11 @@ export class SimulationService {
     private readonly actionSimulation: ActionSimulationService,
     private readonly configService: ConfigService,
   ) {}
-  private simulation(
+  private async simulation(
     simulationService: SimulationModesService,
     sendMailDto: SendMailDto,
   ) {
-    simulationService.run(sendMailDto);
+    return await simulationService.run(sendMailDto);
   }
 
   private getSimulationMode() {
@@ -35,6 +35,6 @@ export class SimulationService {
 
   runSimulation(sendMailDto: SendMailDto) {
     const simulationMode = this.getSimulationMode();
-    this.simulation(simulationMode, sendMailDto);
+    return this.simulation(simulationMode, sendMailDto);
   }
 }

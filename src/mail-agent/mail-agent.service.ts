@@ -4,6 +4,7 @@ import { IMailAgent } from './mail-agent.interface';
 import { OutlookService } from './providers/outlook.service';
 import { SendMailDto } from 'src/mail/dto/send.dto';
 import { MailGunService } from './providers/mail-gun.service';
+import { MailResultDto } from './mail-respnse.dto';
 @Injectable()
 export class MailAgentService {
   constructor(
@@ -19,12 +20,17 @@ export class MailAgentService {
       : this.mailGunService;
   }
 
-  private async agentSendMail(mailAgent: IMailAgent, sendMailDto: SendMailDto) {
+  private async agentSendMail(
+    mailAgent: IMailAgent,
+    sendMailDto: SendMailDto,
+  ): Promise<MailResultDto> {
     mailAgent.printOutProviderName();
     return await mailAgent.sendMail(sendMailDto);
   }
 
-  async sendMailUsingProvider(sendMailDto: SendMailDto) {
+  async sendMailUsingProvider(
+    sendMailDto: SendMailDto,
+  ): Promise<MailResultDto> {
     const mailAgent = this.getProviders(sendMailDto);
     return await this.agentSendMail(mailAgent, sendMailDto);
   }

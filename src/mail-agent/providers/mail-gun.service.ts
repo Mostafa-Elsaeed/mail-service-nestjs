@@ -13,6 +13,7 @@ import { SendMailDto } from 'src/mail/dto/send.dto';
 // Correct import for mailgun.js
 import Mailgun from 'mailgun.js';
 import { IMailAgent } from '../mail-agent.interface';
+import { MailResultDto } from '../mail-respnse.dto';
 
 @Injectable()
 export class MailGunService implements IMailAgent {
@@ -32,7 +33,7 @@ export class MailGunService implements IMailAgent {
     return mailgun.client(clientOptions);
   }
 
-  async sendMail(originalData: SendMailDto) {
+  async sendMail(originalData: SendMailDto): Promise<MailResultDto> {
     // MAIL GUN DATA TYPE MailgunMessageData
     try {
       const mailgunClient = this.getMailgunClient();
@@ -42,11 +43,30 @@ export class MailGunService implements IMailAgent {
         this.config.mailProvider.mailgunDomain,
         data,
       );
+
       console.log('Mail sent successfully:', result);
+      return this.convertMailResultToUnifiedResponse(result);
     } catch (error) {
       console.error('Error sending mail:', error);
-      throw new Error(`Failed to send mail: ${error.message}`);
+      const failureResult: MessagesSendResult = {
+        status: 500,
+        message: 'Failed to send email',
+        details: 'SMTP connection timeout',
+      };
+      // result.;
+      return this.convertMailResultToUnifiedResponse(failureResult);
+      // throw new Error(`Failed to send mail: ${error.message}`);
     }
+  }
+
+  convertMailResultToUnifiedResponse(
+    mailResult: MessagesSendResult,
+  ): MailResultDto {
+    const unifiedResponse: MailResultDto = {
+      externalId: mailResult.id,
+      success: mailResult.id ? true : false,
+    };
+    return unifiedResponse;
   }
 
   getImportantData(data: SendMailDto): MailgunMessageData {

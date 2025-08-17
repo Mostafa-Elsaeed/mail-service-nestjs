@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SimulationModesService } from '../simulation-modes.service';
 import { MailAgentService } from 'src/mail-agent/mail-agent.service';
 import { SendMailDto } from 'src/mail/dto/send.dto';
+import { MailResultDto } from 'src/mail-agent/mail-respnse.dto';
 
 @Injectable()
 export class ActionSimulationService extends SimulationModesService {
@@ -11,9 +12,9 @@ export class ActionSimulationService extends SimulationModesService {
     super(mailAgent);
   }
 
-  async run(sendMailDto: SendMailDto) {
+  async run(sendMailDto: SendMailDto): Promise<MailResultDto> {
     // real send
 
-    await this.sendMailUsingProvider(sendMailDto);
+    return await this.sendMailUsingProvider(sendMailDto);
   }
 }

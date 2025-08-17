@@ -83,6 +83,7 @@ export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
   // }
 
   // import { ConsumeMessage } from 'amqplib';
+  /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 
   private async handleMessage(msg: ConsumeMessage | null): Promise<void> {
     if (!msg) return;

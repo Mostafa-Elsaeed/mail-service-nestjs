@@ -4,6 +4,7 @@ import { SimulationModesService } from '../simulation-modes.service';
 import { MailAgentService } from 'src/mail-agent/mail-agent.service';
 import { SendMailDto } from 'src/mail/dto/send.dto';
 import { ConfigService } from '../../config/config.service';
+import { MailResultDto } from 'src/mail-agent/mail-respnse.dto';
 
 @Injectable()
 export class DevSimulationService extends SimulationModesService {
@@ -16,7 +17,7 @@ export class DevSimulationService extends SimulationModesService {
     super(mailAgent);
   }
 
-  async run(sendMailDto: SendMailDto) {
+  async run(sendMailDto: SendMailDto): Promise<MailResultDto> {
     this.logger.log(
       `🛠 Dev mode, skipping real send: ${JSON.stringify(sendMailDto)}`,
     );
@@ -26,9 +27,16 @@ export class DevSimulationService extends SimulationModesService {
       sendMailDto.recipients.map((e) => {
         e.email = devEmail;
       });
-      await this.sendMailUsingProvider(sendMailDto);
+      return await this.sendMailUsingProvider(sendMailDto);
     } else {
       this.logger.warn('⚠️ No dev email configured, skipping send.');
+      const error: MailResultDto = {
+        errorCode: '404',
+        success: false,
+        externalId: undefined,
+        // message: 'Dev email not configured',
+      };
+      return error;
     }
   }
 }
