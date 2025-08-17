@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from 'src/config/config.service';
-import { IMailAgent } from '../../mail-agent.interface';
+
 import * as FormData from 'form-data';
 import {
   Interfaces,
@@ -12,6 +12,7 @@ import { SendMailDto } from 'src/mail/dto/send.dto';
 
 // Correct import for mailgun.js
 import Mailgun from 'mailgun.js';
+import { IMailAgent } from '../mail-agent.interface';
 
 @Injectable()
 export class MailGunService implements IMailAgent {

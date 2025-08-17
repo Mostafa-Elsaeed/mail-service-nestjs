@@ -27,10 +27,10 @@ export const AppDataSource = new DataSource({
 
   // migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
   // migrations: ['src/migrations/**/*{.ts,.js}'],
-  // migrations: [join(__dirname, 'migrations/**/*{.ts,.js}')],
-  migrations: [
-    join(__dirname, '..', '..', 'src', 'migrations', '**', '*{.ts,.js}'),
-  ],
+  migrations: [join(__dirname, 'migrations/**/*{.ts,.js}')],
+  // migrations: [
+  //   join(__dirname, '..', '..', 'src', 'migrations', '**', '*{.ts,.js}'),
+  // ],
 
   synchronize: process.env.NODE_ENV !== 'production', // Automatically create database schema (not recommended for production)
   logging: process.env.NODE_ENV !== 'production',

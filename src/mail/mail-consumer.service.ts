@@ -7,6 +7,11 @@ import {
 
 import * as amqp from 'amqplib';
 import { ConfigService } from 'src/config/config.service';
+import { MailRequestsEntity } from './entities/mail-requests.entity';
+
+import { plainToInstance } from 'class-transformer';
+import { MailService } from './mail.service';
+import { ConsumeMessage } from 'amqplib';
 
 @Injectable()
 export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
@@ -17,7 +22,10 @@ export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
   private readonly amqpUrl: string;
   private readonly durable: boolean;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private mailService: MailService,
+  ) {
     const username = this.configService.rabbitMq.rabbitMqUsername;
     const password = this.configService.rabbitMq.rabbitMqPassword;
     const host = this.configService.rabbitMq.rabbitMqHost;
@@ -29,7 +37,7 @@ export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     await this.connect();
-    await this.consume();
+    this.consume();
   }
 
   private async connect() {
@@ -43,31 +51,93 @@ export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async consume() {
+  private consume() {
     if (!this.channel) {
       throw new Error('RabbitMQ channel is not available.');
     }
 
-    this.channel.consume(
-      this.queueName,
-      (msg) => {
-        if (msg) {
-          const content = msg.content.toString();
-          this.logger.log(`📩 Received message: ${content}`);
+    // Bind to keep `this` context
+    this.channel.consume(this.queueName, this.handleMessage.bind(this), {
+      noAck: false,
+    });
+  }
 
-          try {
-            const data = JSON.parse(content);
-            this.logger.debug(`Parsed data: ${JSON.stringify(data)}`);
-            // TODO: Handle email processing logic here
-          } catch {
-            this.logger.warn('Message is not valid JSON');
-          }
+  // private async handleMessage(msg: any) {
+  //   if (!msg) return;
 
-          this.channel.ack(msg);
-        }
-      },
-      { noAck: false },
-    );
+  //   const content = msg.content.toString();
+  //   this.logger.log(`📩 Received message: ${content}`);
+
+  //   try {
+  //     const data = JSON.parse(content);
+  //     this.logger.debug(`Parsed data: ${JSON.stringify(data)}`);
+
+  //     const mailRequest = plainToInstance(MailRequestsEntity, data.data);
+  //     await this.mailService.handleNewMailRequest(mailRequest);
+  //     // TODO: Handle email processing logic here
+  //   } catch (err) {
+  //     this.logger.warn('Message is not valid JSON', err);
+  //   }
+
+  //   this.channel.ack(msg);
+  // }
+
+  // import { ConsumeMessage } from 'amqplib';
+
+  private async handleMessage(msg: ConsumeMessage | null): Promise<void> {
+    if (!msg) return;
+
+    const content = this.extractContent(msg);
+    if (!content) {
+      this.logger.warn('❌ Could not extract content from message');
+      this.channel.ack(msg);
+      return;
+    }
+
+    const data = this.parseJson(content);
+    if (!data) {
+      this.logger.warn('❌ Invalid JSON message');
+      this.channel.ack(msg);
+      return;
+    }
+
+    await this.processMailRequest(data);
+
+    this.channel.ack(msg);
+  }
+
+  // ----- smaller duties -----
+
+  private extractContent(msg: ConsumeMessage): string | null {
+    try {
+      const data = msg.content.toString();
+      console.log(`📩 Received message: ${data}`);
+      return data;
+    } catch (err) {
+      this.logger.error('Failed to extract content from message', err);
+      return null;
+    }
+  }
+
+  private parseJson(content: string): unknown | null {
+    try {
+      const parsed = JSON.parse(content);
+      this.logger.debug(`Parsed data: ${JSON.stringify(parsed)}`);
+      return parsed;
+    } catch (err) {
+      this.logger.warn('Failed to parse JSON', err);
+      return null;
+    }
+  }
+
+  private async processMailRequest(data: any): Promise<void> {
+    if (!data?.data) {
+      this.logger.warn('⚠️ Message missing "data" property');
+      return;
+    }
+
+    const mailRequest = plainToInstance(MailRequestsEntity, data.data);
+    await this.mailService.handleNewMailRequest(mailRequest);
   }
 
   async onModuleDestroy() {

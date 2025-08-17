@@ -1,5 +1,6 @@
-import { BaseEntity } from '../database/base-entity';
+import { BaseEntity } from '../../database/base-entity';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { statusEnum } from './status.enum';
 
 @Entity('mail_requests')
 export class MailRequestsEntity extends BaseEntity {
@@ -18,8 +19,12 @@ export class MailRequestsEntity extends BaseEntity {
   @Column({ name: 'retry_count', type: 'int', default: 0 })
   retryCount: number;
 
-  @Column({ type: 'varchar', length: 128, default: 'New' })
-  status: 'New' | 'Processing' | 'Processed' | 'Error';
+  @Column({
+    type: 'enum', // tell TypeORM to use enum
+    enum: statusEnum, // link to the TS enum
+    default: statusEnum.NEW, // default value from enum
+  })
+  status: statusEnum;
 }
 
 // @Entity({ name: 'external_events_raw', schema: '1_staging_external_events' })
