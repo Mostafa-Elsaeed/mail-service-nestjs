@@ -24,7 +24,8 @@
     "migration:create": "npm run typeorm -- migration:create",
     "migration:run": "npm run typeorm migration:run -- -d src/database/database.config.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d src/database/database.config.ts",
-    "seed": "ts-node src/database/run-seed.ts"
+    "seed": "ts-node src/database/run-seed.ts",
+    "k6:load-test":"k6 run --vus 30 --duration 20s src/test/loadtest/mail-send.js"
   },
   "dependencies": {
     "@golevelup/nestjs-rabbitmq": "^6.0.2",
