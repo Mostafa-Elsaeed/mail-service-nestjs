@@ -1,8 +1,34 @@
-import { Injectable } from '@nestjs/common';
-import { ISimulation } from '../simulation.interface';
+// dev-simulation.service.ts
+import { Injectable, Logger } from '@nestjs/common';
+import { SimulationModesService } from '../simulation-modes.service';
+import { MailAgentService } from 'src/mail-agent/mail-agent.service';
+import { SendMailDto } from 'src/mail/dto/send.dto';
+import { ConfigService } from '../../config/config.service';
+
 @Injectable()
-export class DevSimulationService implements ISimulation {
-  run() {
-    console.log('Sending Using with Dev Simulation');
+export class DevSimulationService extends SimulationModesService {
+  private readonly logger = new Logger(DevSimulationService.name);
+
+  constructor(
+    mailAgent: MailAgentService,
+    private configService: ConfigService,
+  ) {
+    super(mailAgent);
+  }
+
+  async run(sendMailDto: SendMailDto) {
+    this.logger.log(
+      `🛠 Dev mode, skipping real send: ${JSON.stringify(sendMailDto)}`,
+    );
+    const devEmail = this.configService.app.devEmail;
+    if (devEmail) {
+      this.logger.log(`📧 Dev email: ${devEmail}`);
+      sendMailDto.recipients.map((e) => {
+        e.email = devEmail;
+      });
+      await this.sendMailUsingProvider(sendMailDto);
+    } else {
+      this.logger.warn('⚠️ No dev email configured, skipping send.');
+    }
   }
 }

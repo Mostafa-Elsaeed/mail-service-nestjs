@@ -1,18 +1,19 @@
-// logging-simulation.service.ts
+// action-simulation.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { SimulationModesService } from '../simulation-modes.service';
 import { MailAgentService } from 'src/mail-agent/mail-agent.service';
 import { SendMailDto } from 'src/mail/dto/send.dto';
 
 @Injectable()
-export class LoggingSimulationService extends SimulationModesService {
-  private readonly logger = new Logger(LoggingSimulationService.name);
-
+export class ActionSimulationService extends SimulationModesService {
+  private readonly logger = new Logger(ActionSimulationService.name);
   constructor(mailAgent: MailAgentService) {
     super(mailAgent);
   }
 
-  run(sendMailDto: SendMailDto) {
-    this.logger.log(`📜 Logging email: ${JSON.stringify(sendMailDto)}`);
+  async run(sendMailDto: SendMailDto) {
+    // real send
+
+    await this.sendMailUsingProvider(sendMailDto);
   }
 }

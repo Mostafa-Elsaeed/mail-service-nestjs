@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -6,10 +6,11 @@ import { plainToInstance } from 'class-transformer';
 
 // Local imports
 import { SendMailDto } from './dto/send.dto';
-import { MailAgentService } from '../mail-agent/mail-agent.service';
+
 import { rabbitMqConfig } from '../config/sections/rabbit-mq/rabbit-mq.config';
 import { MailRequestsEntity } from './entities/mail-requests.entity';
 import { statusEnum } from './entities/status.enum';
+import { SimulationService } from '../simulation/simulation.service';
 
 @Injectable()
 export class MailService {
@@ -17,9 +18,11 @@ export class MailService {
   constructor(
     @Inject(rabbitMqConfig().rabbitMq.serviceName)
     private rabbitmqClient: ClientProxy,
-    private mailAgentService: MailAgentService,
+
     @InjectRepository(MailRequestsEntity)
     private readonly mailRequestRepo: Repository<MailRequestsEntity>,
+
+    private simulationService: SimulationService,
   ) {}
 
   async sendMail(sendMailDto: SendMailDto) {
@@ -78,8 +81,8 @@ export class MailService {
     if (!mailRequest) return; // gracefully exit if not found
 
     await this.changeMailRequestStatus(mailRequest, statusEnum.PROCESSING);
-
-    await this.mailAgentService.sendMailUsingProvider(sendMailDto);
+    this.simulationService.runSimulation(sendMailDto);
+    // await this.mailAgentService.sendMailUsingProvider(sendMailDto);
 
     // await this.changeMailRequestStatus(mailRequest, statusEnum.DONE);
   }
