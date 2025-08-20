@@ -1,5 +1,5 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { Injectable, Logger } from '@nestjs/common';
+
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -13,7 +13,7 @@ import { statusEnum } from './entities/status.enum';
 import { SimulationService } from '../simulation/simulation.service';
 import { MailResultDto } from 'src/mail-agent/mail-respnse.dto';
 import { rabbitMqQueueEnum } from 'src/rabbit-mq/rabbit-queue.enum';
-import { RabbitMQService } from '../rabbit-mq/rabbit-mq.service';
+import { RabbitProducerService } from '../rabbit-mq/rabbit-producer.service';
 
 @Injectable()
 export class MailService {
@@ -24,7 +24,7 @@ export class MailService {
 
     @InjectRepository(MailRequestsEntity)
     private readonly mailRequestRepo: Repository<MailRequestsEntity>,
-    private rabbitMqService: RabbitMQService,
+    private rabbitProducerService: RabbitProducerService,
     private simulationService: SimulationService,
   ) {}
   async onApplicationBootstrap() {
@@ -47,7 +47,7 @@ export class MailService {
 
   addRequestsToMQ(pattern: string, mailRequests: MailRequestsEntity[]) {
     for (const mailRequest of mailRequests) {
-      this.rabbitMqService.storeRequest(pattern, mailRequest);
+      this.rabbitProducerService.storeRequest(pattern, mailRequest);
       // this.rabbitmqClient.emit(pattern, mailRequest);
     }
   }

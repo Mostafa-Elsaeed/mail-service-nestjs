@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  OnModuleInit,
-  OnModuleDestroy,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as amqp from 'amqplib';
 import { ConfigService } from 'src/config/config.service';
 import { ConsumeMessage } from 'amqplib';
@@ -55,6 +50,7 @@ export class RabbitConsumerService {
   //     });
   //   }
 
+  /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
   consume(handleMessage: (msg: ConsumeMessage | null) => Promise<void>) {
     if (!this.channel) {
       throw new Error('RabbitMQ channel is not available.');

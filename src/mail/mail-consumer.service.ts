@@ -69,7 +69,7 @@ export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
   private extractContent(msg: ConsumeMessage): string | null {
     try {
       const data = msg.content.toString();
-      console.log(`📩 Received message: ${data}`);
+      this.logger.log(`📩 Received message: ${data}`);
       return data;
     } catch (err) {
       this.logger.error('Failed to extract content from message', err);
