@@ -6,5 +6,5 @@ export const rabbitMqSchema = z.object({
   RABBITMQ_PORT: z.string(),
   RABBITMQ_USERNAME: z.string(),
   RABBITMQ_PASSWORD: z.string(),
-  RABBITMQ_QUEUE: z.string(),
+  // RABBITMQ_QUEUE: z.string(),
 });

@@ -85,26 +85,56 @@ export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
   // import { ConsumeMessage } from 'amqplib';
   /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 
+  // private async handleMessage(msg: ConsumeMessage | null): Promise<void> {
+  //   if (!msg) return;
+
+  //   const content = this.extractContent(msg);
+  //   if (!content) {
+  //     this.logger.warn('❌ Could not extract content from message');
+  //     this.channel.ack(msg);
+  //     return;
+  //   }
+
+  //   const data = this.parseJson(content);
+  //   if (!data) {
+  //     this.logger.warn('❌ Invalid JSON message');
+  //     this.channel.ack(msg);
+  //     return;
+  //   }
+
+  //   await this.processMailRequest(data);
+
+  //   this.channel.ack(msg);
+  // }
+
   private async handleMessage(msg: ConsumeMessage | null): Promise<void> {
     if (!msg) return;
 
-    const content = this.extractContent(msg);
-    if (!content) {
-      this.logger.warn('❌ Could not extract content from message');
+    try {
+      const content = this.extractContent(msg);
+      if (!content) {
+        this.logger.warn('❌ Could not extract content from message');
+        this.channel.ack(msg);
+        return;
+      }
+
+      const data = this.parseJson(content);
+      if (!data) {
+        this.logger.warn('❌ Invalid JSON message');
+        this.channel.ack(msg);
+        return;
+      }
+
+      await this.processMailRequest(data);
+
+      // ✅ Successfully processed → acknowledge
       this.channel.ack(msg);
-      return;
+    } catch (err) {
+      this.logger.error('❌ Error processing message, requeuing...', err);
+
+      // ❌ Any error → nack with requeue = true
+      this.channel.nack(msg, false, true);
     }
-
-    const data = this.parseJson(content);
-    if (!data) {
-      this.logger.warn('❌ Invalid JSON message');
-      this.channel.ack(msg);
-      return;
-    }
-
-    await this.processMailRequest(data);
-
-    this.channel.ack(msg);
   }
 
   // ----- smaller duties -----

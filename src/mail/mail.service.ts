@@ -12,6 +12,7 @@ import { MailRequestsEntity } from './entities/mail-requests.entity';
 import { statusEnum } from './entities/status.enum';
 import { SimulationService } from '../simulation/simulation.service';
 import { MailResultDto } from 'src/mail-agent/mail-respnse.dto';
+import { rabbitMqQueueEnum } from 'src/rabbit-mq/rabbit-queue.enum';
 
 @Injectable()
 export class MailService {
@@ -25,12 +26,28 @@ export class MailService {
 
     private simulationService: SimulationService,
   ) {}
+  async onApplicationBootstrap() {
+    this.logger.log(
+      'Application bootstrapped — fetching new and processing records...',
+    );
+    const records = await this.getNewMailRequests();
+    for (const record of records) {
+      this.addRequestsToMQ(rabbitMqQueueEnum.MAIL_QUEUE, [record]);
+      await this.changeMailRequestStatus(record, statusEnum.Queued);
+    }
+  }
 
   async sendMail(sendMailDto: SendMailDto) {
     const mailRequest = await this.saveNewMailRequest(sendMailDto);
-
-    this.rabbitmqClient.emit('another_mail_queue', mailRequest);
+    this.addRequestsToMQ(rabbitMqQueueEnum.MAIL_QUEUE, [mailRequest]);
+    await this.changeMailRequestStatus(mailRequest, statusEnum.Queued);
     console.log(`📩 Mail sent to RabbitMQ`);
+  }
+
+  addRequestsToMQ(pattern: string, mailRequests: MailRequestsEntity[]) {
+    for (const mailRequest of mailRequests) {
+      this.rabbitmqClient.emit(pattern, mailRequest);
+    }
   }
 
   async handleNewMailRequest(mailRequestRecord: MailRequestsEntity) {
@@ -121,5 +138,11 @@ export class MailService {
   ) {
     mailRequest.errorCode = errorCode;
     return this.mailRequestRepo.save(mailRequest);
+  }
+
+  getNewMailRequests(): Promise<MailRequestsEntity[]> {
+    return this.mailRequestRepo.find({
+      where: { status: statusEnum.NEW },
+    });
   }
 }

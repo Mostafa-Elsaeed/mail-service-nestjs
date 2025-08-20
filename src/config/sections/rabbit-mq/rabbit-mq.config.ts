@@ -1,3 +1,5 @@
+import { rabbitMqQueueEnum } from 'src/rabbit-mq/rabbit-queue.enum';
+
 export const rabbitMqConfig = () => ({
   rabbitMq: {
     serviceName: process.env.RABBITMQ_SERVICE_NAME,
@@ -8,6 +10,6 @@ export const rabbitMqConfig = () => ({
     rabbitMqUsername: process.env.RABBITMQ_USERNAME,
     rabbitMqPassword: process.env.RABBITMQ_PASSWORD,
 
-    rabbitMqQueue: process.env.RABBITMQ_QUEUE,
+    rabbitMqQueue: rabbitMqQueueEnum.MAIL_QUEUE,
   },
 });
