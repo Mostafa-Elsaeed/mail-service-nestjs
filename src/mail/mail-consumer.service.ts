@@ -1,70 +1,34 @@
 import {
   Injectable,
-  OnModuleInit,
-  OnModuleDestroy,
   Logger,
+  OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
-
-import * as amqp from 'amqplib';
-import { ConfigService } from 'src/config/config.service';
-import { MailRequestsEntity } from './entities/mail-requests.entity';
-
-import { plainToInstance } from 'class-transformer';
+import { RabbitConsumerService } from 'src/rabbit-mq/rabbit-consumer.service';
 import { MailService } from './mail.service';
-import { ConsumeMessage } from 'amqplib';
+import { MailRequestsEntity } from './entities/mail-requests.entity';
 import { statusEnum } from './entities/status.enum';
+import { plainToInstance } from 'class-transformer';
+import { ConsumeMessage } from 'amqplib';
 
 @Injectable()
 export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(MailConsumerService.name);
-  private connection: amqp.Connection;
-  private channel: amqp.Channel;
-  private readonly queueName: string;
-  private readonly amqpUrl: string;
-  private readonly durable: boolean;
 
   constructor(
-    private readonly configService: ConfigService,
+    private readonly rabbitConsumerService: RabbitConsumerService,
     private mailService: MailService,
   ) {
-    const username = this.configService.rabbitMq.rabbitMqUsername;
-    const password = this.configService.rabbitMq.rabbitMqPassword;
-    const host = this.configService.rabbitMq.rabbitMqHost;
-    const port = this.configService.rabbitMq.rabbitMqPort;
-    this.queueName = this.configService.rabbitMq.rabbitMqQueue;
-    this.durable = true;
-    this.amqpUrl = `amqp://${username}:${password}@${host}:${port}`;
+    // this.rabbitConsumerService.handleMessage = this.handleMessage.bind(this);
   }
 
   async onModuleInit() {
-    await this.connect();
-    this.consume();
-  }
-
-  private async connect() {
-    try {
-      this.connection = await amqp.connect(this.amqpUrl);
-      this.channel = await this.connection.createChannel();
-      await this.channel.assertQueue(this.queueName, { durable: this.durable });
-      this.logger.log(`Connected to RabbitMQ queue: ${this.queueName}`);
-    } catch (err) {
-      this.logger.error('Failed to connect to RabbitMQ', err);
-    }
-  }
-
-  private consume() {
-    if (!this.channel) {
-      throw new Error('RabbitMQ channel is not available.');
-    }
-
-    // Bind to keep `this` context
-    this.channel.consume(this.queueName, this.handleMessage.bind(this), {
-      noAck: false,
-    });
+    await this.rabbitConsumerService.connect();
+    // this.rabbitConsumerService.consume();
+    this.rabbitConsumerService.consume(this.handleMessage.bind(this));
   }
 
   /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
-
   private async handleMessage(msg: ConsumeMessage | null): Promise<void> {
     if (!msg) return;
     let mailRequest: MailRequestsEntity | undefined;
@@ -72,26 +36,27 @@ export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
       const content = this.extractContent(msg);
       if (!content) {
         this.logger.warn('❌ Could not extract content from message');
-        this.channel.ack(msg);
+        this.rabbitConsumerService.ackMessage(msg);
         return;
       }
 
       const data = this.parseJson(content);
       if (!data) {
         this.logger.warn('❌ Invalid JSON message');
-        this.channel.ack(msg);
+        this.rabbitConsumerService.ackMessage(msg);
         return;
       }
+
       mailRequest = this.shapeRequestToMailEntity(data);
       await this.processMailRequest(data);
 
       // ✅ Successfully processed → acknowledge
-      this.channel.ack(msg);
+      this.rabbitConsumerService.ackMessage(msg);
     } catch (err) {
       this.logger.error('❌ Error processing message, requeuing...', err);
 
       // ❌ Any error → nack with requeue = true
-      this.channel.nack(msg, false, true);
+      this.rabbitConsumerService.nackMessage(msg, true);
       if (mailRequest) {
         await this.mailService.changeMailRequestStatus(
           mailRequest,
@@ -100,8 +65,6 @@ export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
       }
     }
   }
-
-  // ----- smaller duties -----
 
   private extractContent(msg: ConsumeMessage): string | null {
     try {
@@ -144,8 +107,7 @@ export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy() {
-    await this.channel?.close();
-    await this.connection?.close();
+    await this.rabbitConsumerService.onModuleDestroy();
     this.logger.log('RabbitMQ connection closed');
   }
 }
