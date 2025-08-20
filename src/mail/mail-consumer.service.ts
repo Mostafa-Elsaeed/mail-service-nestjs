@@ -12,6 +12,7 @@ import { MailRequestsEntity } from './entities/mail-requests.entity';
 import { plainToInstance } from 'class-transformer';
 import { MailService } from './mail.service';
 import { ConsumeMessage } from 'amqplib';
+import { statusEnum } from './entities/status.enum';
 
 @Injectable()
 export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
@@ -62,54 +63,11 @@ export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  // private async handleMessage(msg: any) {
-  //   if (!msg) return;
-
-  //   const content = msg.content.toString();
-  //   this.logger.log(`📩 Received message: ${content}`);
-
-  //   try {
-  //     const data = JSON.parse(content);
-  //     this.logger.debug(`Parsed data: ${JSON.stringify(data)}`);
-
-  //     const mailRequest = plainToInstance(MailRequestsEntity, data.data);
-  //     await this.mailService.handleNewMailRequest(mailRequest);
-  //     // TODO: Handle email processing logic here
-  //   } catch (err) {
-  //     this.logger.warn('Message is not valid JSON', err);
-  //   }
-
-  //   this.channel.ack(msg);
-  // }
-
-  // import { ConsumeMessage } from 'amqplib';
   /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
-
-  // private async handleMessage(msg: ConsumeMessage | null): Promise<void> {
-  //   if (!msg) return;
-
-  //   const content = this.extractContent(msg);
-  //   if (!content) {
-  //     this.logger.warn('❌ Could not extract content from message');
-  //     this.channel.ack(msg);
-  //     return;
-  //   }
-
-  //   const data = this.parseJson(content);
-  //   if (!data) {
-  //     this.logger.warn('❌ Invalid JSON message');
-  //     this.channel.ack(msg);
-  //     return;
-  //   }
-
-  //   await this.processMailRequest(data);
-
-  //   this.channel.ack(msg);
-  // }
 
   private async handleMessage(msg: ConsumeMessage | null): Promise<void> {
     if (!msg) return;
-
+    let mailRequest: MailRequestsEntity | undefined;
     try {
       const content = this.extractContent(msg);
       if (!content) {
@@ -124,7 +82,7 @@ export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
         this.channel.ack(msg);
         return;
       }
-
+      mailRequest = this.shapeRequestToMailEntity(data);
       await this.processMailRequest(data);
 
       // ✅ Successfully processed → acknowledge
@@ -134,6 +92,12 @@ export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
 
       // ❌ Any error → nack with requeue = true
       this.channel.nack(msg, false, true);
+      if (mailRequest) {
+        await this.mailService.changeMailRequestStatus(
+          mailRequest,
+          statusEnum.Queued,
+        );
+      }
     }
   }
 
@@ -169,6 +133,14 @@ export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
 
     const mailRequest = plainToInstance(MailRequestsEntity, data.data);
     await this.mailService.handleNewMailRequest(mailRequest);
+  }
+
+  shapeRequestToMailEntity(data: any) {
+    if (!data?.data) {
+      this.logger.warn('⚠️ Message missing "data" property');
+      return;
+    }
+    return plainToInstance(MailRequestsEntity, data.data);
   }
 
   async onModuleDestroy() {

@@ -7,23 +7,24 @@ import { plainToInstance } from 'class-transformer';
 // Local imports
 import { SendMailDto } from './dto/send.dto';
 
-import { rabbitMqConfig } from '../config/sections/rabbit-mq/rabbit-mq.config';
+// import { rabbitMqConfig } from '../config/sections/rabbit-mq/rabbit-mq.config';
 import { MailRequestsEntity } from './entities/mail-requests.entity';
 import { statusEnum } from './entities/status.enum';
 import { SimulationService } from '../simulation/simulation.service';
 import { MailResultDto } from 'src/mail-agent/mail-respnse.dto';
 import { rabbitMqQueueEnum } from 'src/rabbit-mq/rabbit-queue.enum';
+import { RabbitMQService } from '../rabbit-mq/rabbit-mq.service';
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
   constructor(
-    @Inject(rabbitMqConfig().rabbitMq.serviceName)
-    private rabbitmqClient: ClientProxy,
+    // @Inject(rabbitMqConfig().rabbitMq.serviceName)
+    // private rabbitmqClient: ClientProxy,
 
     @InjectRepository(MailRequestsEntity)
     private readonly mailRequestRepo: Repository<MailRequestsEntity>,
-
+    private rabbitMqService: RabbitMQService,
     private simulationService: SimulationService,
   ) {}
   async onApplicationBootstrap() {
@@ -46,7 +47,8 @@ export class MailService {
 
   addRequestsToMQ(pattern: string, mailRequests: MailRequestsEntity[]) {
     for (const mailRequest of mailRequests) {
-      this.rabbitmqClient.emit(pattern, mailRequest);
+      this.rabbitMqService.storeRequest(pattern, mailRequest);
+      // this.rabbitmqClient.emit(pattern, mailRequest);
     }
   }
 
