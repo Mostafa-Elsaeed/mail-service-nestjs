@@ -19,51 +19,55 @@ export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
     private readonly rabbitConsumerService: RabbitConsumerService,
     private mailService: MailService,
   ) {
-    // this.rabbitConsumerService.handleMessage = this.handleMessage.bind(this);
+    // this.rabbitConsumerService.handleMessage = this.processMessage.bind(this);
   }
 
   async onModuleInit() {
     await this.rabbitConsumerService.connect();
     // this.rabbitConsumerService.consume();
-    this.rabbitConsumerService.consume(this.handleMessage.bind(this));
+    this.rabbitConsumerService.consume(this.processMessage.bind(this));
   }
 
   /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
-  private async handleMessage(msg: ConsumeMessage | null): Promise<void> {
+  private async processMessage(msg: ConsumeMessage | null): Promise<void> {
     if (!msg) return;
-    let mailRequest: MailRequestsEntity | undefined;
+    let mailRequest: MailRequestsEntity | undefined = undefined;
     try {
       const content = this.extractContent(msg);
-      if (!content) {
-        this.logger.warn('❌ Could not extract content from message');
-        this.rabbitConsumerService.ackMessage(msg);
-        return;
-      }
+      if (!content) return this.acknowledgeMessage(msg);
 
       const data = this.parseJson(content);
-      if (!data) {
-        this.logger.warn('❌ Invalid JSON message');
-        this.rabbitConsumerService.ackMessage(msg);
-        return;
-      }
+      if (!data) return this.acknowledgeMessage(msg);
 
-      mailRequest = this.shapeRequestToMailEntity(data);
-      await this.processMailRequest(data);
+      const tempMailRequest = this.shapeRequestToMailEntity(data);
+      if (!tempMailRequest) return this.acknowledgeMessage(msg); // Early exit if shaping fails
+      mailRequest = tempMailRequest;
+
+      await this.processMailRequest(mailRequest); // Pass the type-safe mailRequest
 
       // ✅ Successfully processed → acknowledge
-      this.rabbitConsumerService.ackMessage(msg);
+      this.acknowledgeMessage(msg);
     } catch (err) {
-      this.logger.error('❌ Error processing message, requeuing...', err);
-
-      // ❌ Any error → nack with requeue = true
-      this.rabbitConsumerService.nackMessage(msg, true);
-      if (mailRequest) {
-        await this.mailService.changeMailRequestStatus(
-          mailRequest,
-          statusEnum.Queued,
-        );
-      }
+      await this.handleError(err, msg, mailRequest);
     }
+  }
+
+  private async handleError(
+    err: Error,
+    msg: ConsumeMessage,
+    mailRequest: MailRequestsEntity | undefined,
+  ): Promise<void> {
+    if (!mailRequest) {
+      this.acknowledgeMessage(msg);
+      return;
+    }
+    this.logger.error('❌ Error processing message, requeuing...', err);
+    await this.mailService.updateFailedMailRequest(mailRequest, err.message);
+    this.nackMessage(msg, true);
+    await this.mailService.changeMailRequestStatus(
+      mailRequest,
+      statusEnum.Queued,
+    );
   }
 
   private extractContent(msg: ConsumeMessage): string | null {
@@ -88,22 +92,26 @@ export class MailConsumerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async processMailRequest(data: any): Promise<void> {
-    if (!data?.data) {
-      this.logger.warn('⚠️ Message missing "data" property');
-      return;
-    }
-
-    const mailRequest = plainToInstance(MailRequestsEntity, data.data);
+  private async processMailRequest(
+    mailRequest: MailRequestsEntity,
+  ): Promise<void> {
     await this.mailService.handleNewMailRequest(mailRequest);
   }
 
-  shapeRequestToMailEntity(data: any) {
+  shapeRequestToMailEntity(data: any): MailRequestsEntity | undefined {
     if (!data?.data) {
       this.logger.warn('⚠️ Message missing "data" property');
-      return;
+      return undefined; // Return undefined for better type safety
     }
     return plainToInstance(MailRequestsEntity, data.data);
+  }
+
+  private acknowledgeMessage(msg: ConsumeMessage): void {
+    this.rabbitConsumerService.ackMessage(msg);
+    //  this.rabbitConsumerService.nackMessage
+  }
+  private nackMessage(msg: ConsumeMessage, requeue = true): void {
+    this.rabbitConsumerService.nackMessage(msg, requeue);
   }
 
   async onModuleDestroy() {

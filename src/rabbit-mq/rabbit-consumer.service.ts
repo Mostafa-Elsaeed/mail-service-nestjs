@@ -17,15 +17,10 @@ export class RabbitConsumerService {
     const password = this.configService.rabbitMq.rabbitMqPassword;
     const host = this.configService.rabbitMq.rabbitMqHost;
     const port = this.configService.rabbitMq.rabbitMqPort;
-    this.queueName = this.configService.rabbitMq.rabbitMqQueue;
+    this.queueName = this.configService.rabbitMq.rabbitMqQueueName;
     this.durable = true;
     this.amqpUrl = `amqp://${username}:${password}@${host}:${port}`;
   }
-
-  //   async onModuleInit() {
-  //     await this.connect();
-  //     this.consume();
-  //   }
 
   async connect() {
     try {
@@ -40,16 +35,6 @@ export class RabbitConsumerService {
     }
   }
 
-  //   consume() {
-  //     if (!this.channel) {
-  //       throw new Error('RabbitMQ channel is not available.');
-  //     }
-
-  //     this.channel.consume(this.queueName, {
-  //       noAck: false,
-  //     });
-  //   }
-
   /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
   consume(handleMessage: (msg: ConsumeMessage | null) => Promise<void>) {
     if (!this.channel) {
@@ -63,17 +48,6 @@ export class RabbitConsumerService {
       },
       { noAck: false },
     );
-  }
-
-  //   handleMessage(msg: ConsumeMessage | null): Promise<void> {
-  //     // Implement message handling logic here
-  //     return Promise.resolve(); // Placeholder; to be overridden in MailConsumerService.
-  //   }
-
-  async onModuleDestroy() {
-    await this.channel?.close();
-    await this.connection?.close();
-    this.logger.log('RabbitMQ connection closed');
   }
 
   ackMessage(msg: ConsumeMessage): void {
@@ -92,5 +66,11 @@ export class RabbitConsumerService {
     this.logger.log(
       `Message negatively acknowledged: ${msg.fields.deliveryTag}. Requeue: ${requeue}`,
     );
+  }
+
+  async onModuleDestroy() {
+    await this.channel?.close();
+    await this.connection?.close();
+    this.logger.log('RabbitMQ connection closed');
   }
 }

@@ -4,5 +4,5 @@ export interface IRabbitMqConfig {
   rabbitMqPort: string;
   rabbitMqUsername: string;
   rabbitMqPassword: string;
-  rabbitMqQueue: string;
+  rabbitMqQueueName: string;
 }

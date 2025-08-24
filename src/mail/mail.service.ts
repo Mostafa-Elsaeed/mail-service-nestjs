@@ -12,7 +12,7 @@ import { MailRequestsEntity } from './entities/mail-requests.entity';
 import { statusEnum } from './entities/status.enum';
 import { SimulationService } from '../simulation/simulation.service';
 import { MailResultDto } from 'src/mail-agent/mail-respnse.dto';
-import { rabbitMqQueueEnum } from 'src/rabbit-mq/rabbit-queue.enum';
+
 import { RabbitProducerService } from '../rabbit-mq/rabbit-producer.service';
 import { ConfigService } from '../config/config.service';
 
@@ -33,6 +33,9 @@ export class MailService {
     this.logger.log(
       'Application bootstrapped — fetching new and processing records...',
     );
+    this.logger.log(
+      `Pattern Name: ${this.configService.rabbitMq.rabbitMqQueueName}`,
+    );
     const totalRecords: MailRequestsEntity[] = [];
 
     const newRecords = await this.getNewMailRequests();
@@ -42,14 +45,21 @@ export class MailService {
     totalRecords.push(...failedRecords);
 
     for (const record of totalRecords) {
-      this.addRequestsToMQ(rabbitMqQueueEnum.MAIL_QUEUE, [record]);
+      this.addRequestsToMQ(this.configService.rabbitMq.rabbitMqQueueName, [
+        record,
+      ]);
       await this.changeMailRequestStatus(record, statusEnum.Queued);
     }
   }
 
   async sendMail(sendMailDto: SendMailDto) {
     const mailRequest = await this.saveNewMailRequest(sendMailDto);
-    this.addRequestsToMQ(rabbitMqQueueEnum.MAIL_QUEUE, [mailRequest]);
+    this.logger.log(
+      `Pattern Name: ${this.configService.rabbitMq.rabbitMqQueueName}`,
+    );
+    this.addRequestsToMQ(this.configService.rabbitMq.rabbitMqQueueName, [
+      mailRequest,
+    ]);
     await this.changeMailRequestStatus(mailRequest, statusEnum.Queued);
     console.log(`📩 Mail sent to RabbitMQ`);
   }

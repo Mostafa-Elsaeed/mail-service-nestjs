@@ -1,8 +1,4 @@
-import {
-  Transport,
-  RmqOptions,
-  ClientProviderOptions,
-} from '@nestjs/microservices';
+import { Transport, ClientProviderOptions } from '@nestjs/microservices';
 import { rabbitMqConfig } from '../config/sections/rabbit-mq/rabbit-mq.config';
 
 const rabbitmqUrl = `amqp://${rabbitMqConfig().rabbitMq.rabbitMqUsername}:${rabbitMqConfig().rabbitMq.rabbitMqPassword}@${rabbitMqConfig().rabbitMq.rabbitMqHost}`;
@@ -12,21 +8,9 @@ export const rabbitmqClientConfig: ClientProviderOptions = {
   transport: Transport.RMQ,
   options: {
     urls: [rabbitmqUrl],
-    queue: rabbitMqConfig().rabbitMq.rabbitMqQueue,
+    queue: rabbitMqConfig().rabbitMq.rabbitMqQueueName,
     queueOptions: {
       durable: true,
     },
-  },
-};
-
-export const rabbitmqServerConfig: RmqOptions = {
-  transport: Transport.RMQ,
-  options: {
-    urls: [rabbitmqUrl],
-    queue: rabbitMqConfig().rabbitMq.rabbitMqQueue,
-    queueOptions: {
-      durable: true,
-    },
-    noAck: false,
   },
 };
