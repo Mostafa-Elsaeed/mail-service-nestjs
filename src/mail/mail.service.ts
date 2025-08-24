@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import { Repository } from 'typeorm';
+import { LessThan, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
 
@@ -14,6 +14,7 @@ import { SimulationService } from '../simulation/simulation.service';
 import { MailResultDto } from 'src/mail-agent/mail-respnse.dto';
 import { rabbitMqQueueEnum } from 'src/rabbit-mq/rabbit-queue.enum';
 import { RabbitProducerService } from '../rabbit-mq/rabbit-producer.service';
+import { ConfigService } from '../config/config.service';
 
 @Injectable()
 export class MailService {
@@ -26,13 +27,21 @@ export class MailService {
     private readonly mailRequestRepo: Repository<MailRequestsEntity>,
     private rabbitProducerService: RabbitProducerService,
     private simulationService: SimulationService,
+    private configService: ConfigService,
   ) {}
   async onApplicationBootstrap() {
     this.logger.log(
       'Application bootstrapped — fetching new and processing records...',
     );
-    const records = await this.getNewMailRequests();
-    for (const record of records) {
+    const totalRecords: MailRequestsEntity[] = [];
+
+    const newRecords = await this.getNewMailRequests();
+    totalRecords.push(...newRecords);
+
+    const failedRecords = await this.getFailedLessThanRetryAttempts();
+    totalRecords.push(...failedRecords);
+
+    for (const record of totalRecords) {
       this.addRequestsToMQ(rabbitMqQueueEnum.MAIL_QUEUE, [record]);
       await this.changeMailRequestStatus(record, statusEnum.Queued);
     }
@@ -75,13 +84,20 @@ export class MailService {
       const sendResponse =
         await this.simulationService.runSimulation(sendMailDto);
 
+      if (!sendResponse.success) {
+        await this.updateFailedMailRequest(
+          mailRequest,
+          sendResponse.errorCode || '',
+        );
+      }
+
       await this.changeMailRequestStatus(
         mailRequest,
         sendResponse.success ? statusEnum.DONE : statusEnum.ERROR,
       );
     } catch (error) {
       this.logger.error(`Error during mail simulation: ${error.message}`);
-      await this.changeMailRequestStatus(mailRequest, statusEnum.ERROR);
+      await this.updateFailedMailRequest(mailRequest, error);
     }
   }
 
@@ -142,9 +158,23 @@ export class MailService {
     return this.mailRequestRepo.save(mailRequest);
   }
 
+  updateFailedMailRequest(mailRequest: MailRequestsEntity, errorCode: string) {
+    mailRequest.errorCode = errorCode;
+    mailRequest.status = statusEnum.ERROR;
+    mailRequest.retryCount += 1;
+    return this.mailRequestRepo.save(mailRequest);
+  }
+
   getNewMailRequests(): Promise<MailRequestsEntity[]> {
     return this.mailRequestRepo.find({
       where: { status: statusEnum.NEW },
+    });
+  }
+
+  getFailedLessThanRetryAttempts() {
+    const retryCount = this.configService.app.retryAttempts; // TODO: get from config
+    return this.mailRequestRepo.find({
+      where: { status: statusEnum.ERROR, retryCount: LessThan(retryCount) },
     });
   }
 }

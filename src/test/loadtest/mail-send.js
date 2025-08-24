@@ -1,9 +1,9 @@
 import http from "k6/http";
 
-// export const options = {
-//     vus: 500,          // virtual users
-//     duration: "30s",   // test duration
-// };
+export const options = {
+    vus: 500,          // virtual users
+    duration: "30s",   // test duration
+};
 
 export default function () {
     const url = "http://localhost:3000/mail/send";
