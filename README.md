@@ -15,7 +15,7 @@ This project is a RabbitMQ-based microservice built with NestJS for handling ema
 ## Graph
 
 ![System Design](imgs/request_cycle.png)
-![System Design](imgs/edge_case_placed_but_not_queued.png)
+![System Design](imgs/startup_cycle.png)
 
 ## Technologies Used
 
