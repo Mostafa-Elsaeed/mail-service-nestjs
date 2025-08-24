@@ -94,7 +94,10 @@ export class OutlookService implements IMailAgent {
     }
   }
 
-  async sendMail(options: OutlookMailOptions): Promise<MailResultDto> {
+  async sendMail(
+    options: OutlookMailOptions,
+    simulationInfo: MailResultDto,
+  ): Promise<MailResultDto> {
     try {
       // Format recipients
       const toRecipients = this.formatRecipients(options.to);
@@ -148,7 +151,7 @@ export class OutlookService implements IMailAgent {
       const result = await this.graphClient
         .api(`/users/${userEmail}/sendMail`)
         .post(message);
-      return this.convertMailResultToUnifiedResponse(result);
+      return this.convertMailResultToUnifiedResponse(result, simulationInfo);
       // this.logger.log(
       //   `Email sent successfully to ${JSON.stringify(options.to)}`,
       // );
@@ -162,7 +165,7 @@ export class OutlookService implements IMailAgent {
         `Error sending email with Outlook: ${error.message}`,
         error.stack,
       );
-      return this.convertMailResultToUnifiedResponse(error);
+      return this.convertMailResultToUnifiedResponse(error, simulationInfo);
     }
   }
 
@@ -182,7 +185,10 @@ export class OutlookService implements IMailAgent {
   }
 
   // convertMailResultToUnifiedResponse(responseShape: unknown): MailResultDto {}
-  convertMailResultToUnifiedResponse(responseShape: unknown): MailResultDto {
+  convertMailResultToUnifiedResponse(
+    responseShape: unknown,
+    simulationInfo: MailResultDto,
+  ): MailResultDto {
     // If Graph returned nothing (202 Accepted case)
     const response: MailResultDto = new MailResultDto();
     if (!responseShape) {
@@ -193,16 +199,22 @@ export class OutlookService implements IMailAgent {
     // If we got an error object
     const errorObj: any = (responseShape as any)?.error;
     if (errorObj) {
-      return {
-        success: false,
-        errorCode: errorObj.code,
-      };
+      simulationInfo.success = false;
+      simulationInfo.errorCode = errorObj.code || 'UNKNOWN_ERROR';
+      return simulationInfo;
+      // return {
+      //   success: false,
+      //   errorCode: errorObj.code,
+      // };
     }
 
     // Fallback if shape is unexpected
-    return {
-      success: false,
-      errorCode: 'UNKNOWN_ERROR',
-    };
+    // return {
+    //   success: false,
+    //   errorCode: 'UNKNOWN_ERROR',
+    // };
+    simulationInfo.success = false;
+    simulationInfo.errorCode = 'UNKNOWN_ERROR';
+    return simulationInfo;
   }
 }

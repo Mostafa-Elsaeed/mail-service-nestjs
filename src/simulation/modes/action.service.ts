@@ -14,7 +14,8 @@ export class ActionSimulationService extends SimulationModesService {
 
   async run(sendMailDto: SendMailDto): Promise<MailResultDto> {
     // real send
-
-    return await this.sendMailUsingProvider(sendMailDto);
+    const simulationInfo = new MailResultDto();
+    simulationInfo.realRecipients = sendMailDto.recipients.map((r) => r.email);
+    return await this.sendMailUsingProvider(sendMailDto, simulationInfo);
   }
 }

@@ -7,8 +7,9 @@ export abstract class SimulationModesService {
 
   async sendMailUsingProvider(
     sendMailDto: SendMailDto,
+    simulationInfo: MailResultDto,
   ): Promise<MailResultDto> {
-    return this.mailAgent.sendMailUsingProvider(sendMailDto);
+    return this.mailAgent.sendMailUsingProvider(sendMailDto, simulationInfo);
   }
 
   abstract run(sendMailDto: SendMailDto): Promise<MailResultDto>;

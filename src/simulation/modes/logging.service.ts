@@ -13,19 +13,20 @@ export class LoggingSimulationService extends SimulationModesService {
     super(mailAgent);
   }
 
-  async run(sendMailDto: SendMailDto): Promise<MailResultDto> {
+  async run(
+    sendMailDto: SendMailDto,
+    // simulationInfo: MailResultDto,
+  ): Promise<MailResultDto> {
     this.logger.log(`📜 Logging email: ${JSON.stringify(sendMailDto)}`);
 
     // ⏳ Simulate delay (e.g. 2 seconds)
     const msDelay = 2000;
     await new Promise((resolve) => setTimeout(resolve, msDelay));
+    const simulationInfo = new MailResultDto();
+    simulationInfo.success = true;
+    simulationInfo.externalId = 'log-123';
+    simulationInfo.errorCode = undefined;
 
-    const response: MailResultDto = {
-      success: true,
-      externalId: 'log-123',
-      errorCode: undefined,
-    };
-
-    return response;
+    return simulationInfo;
   }
 }

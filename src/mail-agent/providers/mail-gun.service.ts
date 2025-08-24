@@ -33,7 +33,10 @@ export class MailGunService implements IMailAgent {
     return mailgun.client(clientOptions);
   }
 
-  async sendMail(originalData: SendMailDto): Promise<MailResultDto> {
+  async sendMail(
+    originalData: SendMailDto,
+    simulationInfo: MailResultDto,
+  ): Promise<MailResultDto> {
     // MAIL GUN DATA TYPE MailgunMessageData
     try {
       const mailgunClient = this.getMailgunClient();
@@ -45,7 +48,7 @@ export class MailGunService implements IMailAgent {
       );
 
       console.log('Mail sent successfully:', result);
-      return this.convertMailResultToUnifiedResponse(result);
+      return this.convertMailResultToUnifiedResponse(result, simulationInfo);
     } catch (error) {
       console.error('Error sending mail:', error);
       const failureResult: MessagesSendResult = {
@@ -54,19 +57,21 @@ export class MailGunService implements IMailAgent {
         details: 'SMTP connection timeout',
       };
       // result.;
-      return this.convertMailResultToUnifiedResponse(failureResult);
+      return this.convertMailResultToUnifiedResponse(
+        failureResult,
+        simulationInfo,
+      );
       // throw new Error(`Failed to send mail: ${error.message}`);
     }
   }
 
   convertMailResultToUnifiedResponse(
     mailResult: MessagesSendResult,
+    simulationInfo: MailResultDto,
   ): MailResultDto {
-    const unifiedResponse: MailResultDto = {
-      externalId: mailResult.id,
-      success: mailResult.id ? true : false,
-    };
-    return unifiedResponse;
+    simulationInfo.success = mailResult.id ? true : false;
+    simulationInfo.externalId = mailResult.id;
+    return simulationInfo;
   }
 
   getImportantData(data: SendMailDto): MailgunMessageData {

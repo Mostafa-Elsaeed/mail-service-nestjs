@@ -85,6 +85,33 @@ export class MailService {
     return this.mailRequestRepo.save(request);
   }
 
+  // async processMailRequest(sendMailDto: SendMailDto, requestId: string) {
+  //   const mailRequest = await this.getOrFail(requestId);
+  //   if (!mailRequest) return; // gracefully exit if not found
+
+  //   await this.changeMailRequestStatus(mailRequest, statusEnum.PROCESSING);
+  //   try {
+  //     const sendResponse: MailResultDto =
+  //       await this.simulationService.runSimulation(sendMailDto);
+
+  //     if (!sendResponse.success) {
+  //       await this.updateFailedMailRequest(
+  //         mailRequest,
+  //         sendResponse.errorCode || '',
+  //       );
+  //     }
+
+  //     await this.changeMailRequestStatus(
+  //       mailRequest,
+  //       sendResponse.success ? statusEnum.DONE : statusEnum.ERROR,
+  //     );
+  //     this.logger.log('Send Response:', sendResponse);
+  //   } catch (error) {
+  //     this.logger.error(`Error during mail simulation: ${error.message}`);
+  //     await this.updateFailedMailRequest(mailRequest, error);
+  //   }
+  // }
+
   async processMailRequest(sendMailDto: SendMailDto, requestId: string) {
     const mailRequest = await this.getOrFail(requestId);
     if (!mailRequest) return; // gracefully exit if not found
@@ -94,21 +121,29 @@ export class MailService {
       const sendResponse =
         await this.simulationService.runSimulation(sendMailDto);
 
-      if (!sendResponse.success) {
-        await this.updateFailedMailRequest(
-          mailRequest,
-          sendResponse.errorCode || '',
-        );
-      }
-
-      await this.changeMailRequestStatus(
-        mailRequest,
-        sendResponse.success ? statusEnum.DONE : statusEnum.ERROR,
-      );
+      await this.handleMailResult(mailRequest, sendResponse);
+      this.logger.log('Send Response:', sendResponse);
     } catch (error) {
       this.logger.error(`Error during mail simulation: ${error.message}`);
       await this.updateFailedMailRequest(mailRequest, error);
     }
+  }
+
+  private async handleMailResult(
+    mailRequest: MailRequestsEntity,
+    sendResponse: MailResultDto,
+  ) {
+    if (!sendResponse.success) {
+      await this.updateFailedMailRequest(
+        mailRequest,
+        sendResponse.errorCode || '',
+      );
+    }
+
+    await this.changeMailRequestStatus(
+      mailRequest,
+      sendResponse.success ? statusEnum.DONE : statusEnum.ERROR,
+    );
   }
 
   updateMailRequestDB(
@@ -120,6 +155,7 @@ export class MailService {
     mailRequest.status = requestResult.success
       ? statusEnum.DONE
       : statusEnum.ERROR;
+    // mailRequest.rea
     return this.mailRequestRepo.save(mailRequest);
   }
 

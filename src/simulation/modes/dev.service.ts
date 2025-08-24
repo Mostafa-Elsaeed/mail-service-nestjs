@@ -22,21 +22,27 @@ export class DevSimulationService extends SimulationModesService {
       `🛠 Dev mode, skipping real send: ${JSON.stringify(sendMailDto)}`,
     );
     const devEmail = this.configService.app.devEmail;
+    const simulationInfo = new MailResultDto();
     if (devEmail) {
+      simulationInfo.realRecipients = [devEmail];
       this.logger.log(`📧 Dev email: ${devEmail}`);
       sendMailDto.recipients.map((e) => {
         e.email = devEmail;
       });
-      return await this.sendMailUsingProvider(sendMailDto);
+      return await this.sendMailUsingProvider(sendMailDto, simulationInfo);
     } else {
       this.logger.warn('⚠️ No dev email configured, skipping send.');
-      const error: MailResultDto = {
-        errorCode: '404',
-        success: false,
-        externalId: undefined,
-        // message: 'Dev email not configured',
-      };
-      return error;
+      // const error: MailResultDto = {
+      //   errorCode: '404',
+      //   success: false,
+      //   externalId: undefined,
+      //   // message: 'Dev email not configured',
+      // };
+      // return error;
+      simulationInfo.success = false;
+      simulationInfo.errorCode = '404';
+      simulationInfo.externalId = undefined;
+      return simulationInfo;
     }
   }
 }

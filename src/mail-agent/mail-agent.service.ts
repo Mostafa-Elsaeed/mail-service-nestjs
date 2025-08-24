@@ -23,15 +23,17 @@ export class MailAgentService {
   private async agentSendMail(
     mailAgent: IMailAgent,
     sendMailDto: SendMailDto,
+    simulationInfo: MailResultDto,
   ): Promise<MailResultDto> {
     mailAgent.printOutProviderName();
-    return await mailAgent.sendMail(sendMailDto);
+    return await mailAgent.sendMail(sendMailDto, simulationInfo);
   }
 
   async sendMailUsingProvider(
     sendMailDto: SendMailDto,
+    simulationInfo: MailResultDto,
   ): Promise<MailResultDto> {
     const mailAgent = this.getProviders(sendMailDto);
-    return await this.agentSendMail(mailAgent, sendMailDto);
+    return await this.agentSendMail(mailAgent, sendMailDto, simulationInfo);
   }
 }

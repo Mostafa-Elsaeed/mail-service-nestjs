@@ -21,10 +21,14 @@ export class MailResultDto {
   })
   errorCode?: string;
 
-  @ApiProperty({
-    description: 'How many times this request was retried',
-    example: 1,
-    required: false,
-  })
-  retryCount?: number;
+  // @ApiProperty({
+  //   description: 'How many times this request was retried',
+  //   example: 1,
+  //   required: false,
+  // })
+  // retryCount?: number;
+
+  realRecipients: string[];
+
+  // simulationMode:;
 }
