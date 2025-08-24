@@ -34,4 +34,11 @@ async function bootstrap() {
     `API documentation is available at: http://localhost:${process.env.PORT ?? 3000}/docs`,
   );
 }
-bootstrap();
+// bootstrap();
+bootstrap()
+  .then(() => {
+    console.log('Bootstrap completed successfully');
+  })
+  .catch((error) => {
+    console.error('Error during bootstrap:', error);
+  });
